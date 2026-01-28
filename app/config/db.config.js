@@ -1,6 +1,7 @@
 module.exports = {
   HOST: "localhost",
-  USER: "root",
-  PASSWORD: "123456",
-  DB: "testdb"
+  USER: "phpmyadmin",
+  PASSWORD: "Password123#@!",
+  DB: "test_nodejs_mysql"
 };
+
