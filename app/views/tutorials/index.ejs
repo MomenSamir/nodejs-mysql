@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutorials - List</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+      font-size: 28px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: #0056b3;
+    }
+    .btn-danger {
+      background: #dc3545;
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    .btn-danger:hover {
+      background: #c82333;
+    }
+    .btn-edit {
+      background: #28a745;
+      padding: 6px 12px;
+      font-size: 12px;
+      margin-right: 5px;
+    }
+    .btn-edit:hover {
+      background: #218838;
+    }
+    .tutorial-list {
+      list-style: none;
+    }
+    .tutorial-item {
+      border: 1px solid #e0e0e0;
+      padding: 20px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      background: #fafafa;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .tutorial-info {
+      flex: 1;
+    }
+    .tutorial-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    .tutorial-description {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    .tutorial-status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .status-published {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-draft {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .tutorial-actions {
+      display: flex;
+      gap: 5px;
+    }
+    .delete-form {
+      display: inline;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+    .empty-state p {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📚 Tutorials</h1>
+      <a href="/tutorials/create" class="btn">+ Create New Tutorial</a>
+    </div>
+
+    <% if (tutorials.length === 0) { %>
+      <div class="empty-state">
+        <p>No tutorials found</p>
+        <a href="/tutorials/create" class="btn">Create your first tutorial</a>
+      </div>
+    <% } else { %>
+      <ul class="tutorial-list">
+        <% tutorials.forEach(t => { %>
+          <li class="tutorial-item">
+            <div class="tutorial-info">
+              <div class="tutorial-title"><%= t.title %></div>
+              <div class="tutorial-description"><%= t.description || 'No description' %></div>
+              <span class="tutorial-status <%= t.published ? 'status-published' : 'status-draft' %>">
+                <%= t.published ? '✓ Published' : '○ Draft' %>
+              </span>
+            </div>
+            <div class="tutorial-actions">
+              <a href="/tutorials/<%= t.id %>/edit" class="btn btn-edit">Edit</a>
+              <form method="POST" action="/api/tutorials/<%= t.id %>" class="delete-form" onsubmit="return confirm('Delete this tutorial?');">
+                <input type="hidden" name="_method" value="DELETE">
+                <button type="submit" class="btn btn-danger">Delete</button>
+              </form>
+            </div>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </div>
+</body>
+</html>

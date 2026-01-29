@@ -1,30 +1,33 @@
 const express = require("express");
-// const bodyParser = require("body-parser"); /* deprecated */
 const cors = require("cors");
+const path = require("path");
 
 const app = express();
 
-var corsOptions = {
+// ---------- Config ----------
+const PORT = process.env.PORT || 8080;
+const corsOptions = {
   origin: "http://localhost:8081"
 };
 
-app.use(cors(corsOptions));
+// ---------- Middleware ----------
+app.use("/api", cors(corsOptions));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// parse requests of content-type - application/json
-app.use(express.json()); /* bodyParser.json() is deprecated */
+// ---------- View Engine ----------
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "app/views"));
 
-// parse requests of content-type - application/x-www-form-urlencoded
-app.use(express.urlencoded({ extended: true })); /* bodyParser.urlencoded() is deprecated */
-
-// simple route
+// ---------- Routes ----------
 app.get("/", (req, res) => {
-  res.json({ message: "Welcome to bezkoder application." });
+  res.redirect("/tutorials");
 });
 
-require("./app/routes/tutorial.routes.js")(app);
+app.use("/", require("./app/routes/tutorial.view.routes"));
+app.use("/api/tutorials", require("./app/routes/tutorial.routes"));
 
-// set port, listen for requests
-const PORT = process.env.PORT || 8080;
+// ---------- Start Server ----------
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}.`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
