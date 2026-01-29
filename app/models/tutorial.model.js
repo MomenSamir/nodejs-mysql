@@ -1,129 +1,95 @@
-const sql = require("./db.js");
+const sql = require("./db.js"); // promise-based pool
 
-// constructor
-const Tutorial = function(tutorial) {
-  this.title = tutorial.title;
-  this.description = tutorial.description;
-  this.published = tutorial.published;
-};
-
-Tutorial.create = (newTutorial, result) => {
-  sql.query("INSERT INTO tutorials SET ?", newTutorial, (err, res) => {
-    if (err) {
-      console.log("error: ", err);
-      result(err, null);
-      return;
-    }
-
-    console.log("created tutorial: ", { id: res.insertId, ...newTutorial });
-    result(null, { id: res.insertId, ...newTutorial });
-  });
-};
-
-Tutorial.findById = (id, result) => {
-  sql.query(`SELECT * FROM tutorials WHERE id = ${id}`, (err, res) => {
-    if (err) {
-      console.log("error: ", err);
-      result(err, null);
-      return;
-    }
-
-    if (res.length) {
-      console.log("found tutorial: ", res[0]);
-      result(null, res[0]);
-      return;
-    }
-
-    // not found Tutorial with the id
-    result({ kind: "not_found" }, null);
-  });
-};
-
-Tutorial.getAll = (title, result) => {
-  let query = "SELECT * FROM tutorials";
-
-  if (title) {
-    query += ` WHERE title LIKE '%${title}%'`;
+class Tutorial {
+  constructor(tutorial) {
+    this.title = tutorial.title;
+    this.description = tutorial.description;
+    this.published = tutorial.published || false;
   }
 
-  sql.query(query, (err, res) => {
-    if (err) {
-      console.log("error: ", err);
-      result(null, err);
-      return;
+  // Create a new Tutorial
+  static async create(newTutorial) {
+    try {
+      const [res] = await sql.query("INSERT INTO tutorials SET ?", newTutorial);
+      return { id: res.insertId, ...newTutorial };
+    } catch (err) {
+      console.error("Error creating tutorial:", err);
+      throw err;
     }
+  }
 
-    console.log("tutorials: ", res);
-    result(null, res);
-  });
-};
-
-Tutorial.getAllPublished = result => {
-  sql.query("SELECT * FROM tutorials WHERE published=true", (err, res) => {
-    if (err) {
-      console.log("error: ", err);
-      result(null, err);
-      return;
+  // Find by Id
+  static async findById(id) {
+    try {
+      const [rows] = await sql.query("SELECT * FROM tutorials WHERE id = ?", [id]);
+      if (rows.length) return rows[0];
+      const error = { kind: "not_found" };
+      throw error;
+    } catch (err) {
+      throw err;
     }
+  }
 
-    console.log("tutorials: ", res);
-    result(null, res);
-  });
-};
-
-Tutorial.updateById = (id, tutorial, result) => {
-  sql.query(
-    "UPDATE tutorials SET title = ?, description = ?, published = ? WHERE id = ?",
-    [tutorial.title, tutorial.description, tutorial.published, id],
-    (err, res) => {
-      if (err) {
-        console.log("error: ", err);
-        result(null, err);
-        return;
+  // Get all
+  static async getAll(title) {
+    try {
+      let query = "SELECT * FROM tutorials";
+      const params = [];
+      if (title) {
+        query += " WHERE title LIKE ?";
+        params.push(`%${title}%`);
       }
-
-      if (res.affectedRows == 0) {
-        // not found Tutorial with the id
-        result({ kind: "not_found" }, null);
-        return;
-      }
-
-      console.log("updated tutorial: ", { id: id, ...tutorial });
-      result(null, { id: id, ...tutorial });
+      const [rows] = await sql.query(query, params);
+      return rows;
+    } catch (err) {
+      throw err;
     }
-  );
-};
+  }
 
-Tutorial.remove = (id, result) => {
-  sql.query("DELETE FROM tutorials WHERE id = ?", id, (err, res) => {
-    if (err) {
-      console.log("error: ", err);
-      result(null, err);
-      return;
+  // Get all published
+  static async getAllPublished() {
+    try {
+      const [rows] = await sql.query("SELECT * FROM tutorials WHERE published = true");
+      return rows;
+    } catch (err) {
+      throw err;
     }
+  }
 
-    if (res.affectedRows == 0) {
-      // not found Tutorial with the id
-      result({ kind: "not_found" }, null);
-      return;
+  // Update by Id
+  static async updateById(id, tutorial) {
+    try {
+      const [res] = await sql.query(
+        "UPDATE tutorials SET title = ?, description = ?, published = ? WHERE id = ?",
+        [tutorial.title, tutorial.description, tutorial.published, id]
+      );
+      if (res.affectedRows === 0) throw { kind: "not_found" };
+      return { id, ...tutorial };
+    } catch (err) {
+      throw err;
     }
+  }
 
-    console.log("deleted tutorial with id: ", id);
-    result(null, res);
-  });
-};
-
-Tutorial.removeAll = result => {
-  sql.query("DELETE FROM tutorials", (err, res) => {
-    if (err) {
-      console.log("error: ", err);
-      result(null, err);
-      return;
+  // Delete by Id
+  static async remove(id) {
+    try {
+      const [res] = await sql.query("DELETE FROM tutorials WHERE id = ?", [id]);
+      if (res.affectedRows === 0) throw { kind: "not_found" };
+      return res;
+    } catch (err) {
+      throw err;
     }
+  }
 
-    console.log(`deleted ${res.affectedRows} tutorials`);
-    result(null, res);
-  });
-};
+  // Delete all
+  static async removeAll() {
+    try {
+      const [res] = await sql.query("DELETE FROM tutorials");
+      return res;
+    } catch (err) {
+      throw err;
+    }
+  }
+}
 
 module.exports = Tutorial;
