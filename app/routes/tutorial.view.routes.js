@@ -1,7 +1,11 @@
 const express = require("express");
 const Tutorial = require("../models/tutorial.model.js");
+const { isAuthenticated } = require("../middleware/auth.middleware");
 
 const router = express.Router();
+
+// All routes require authentication
+router.use(isAuthenticated);
 
 // List
 router.get("/tutorials", async (req, res) => {
@@ -20,5 +24,4 @@ router.get("/tutorials/:id/edit", async (req, res) => {
   res.render("tutorials/edit", { tutorial });
 });
 
-// Export the router
 module.exports = router;

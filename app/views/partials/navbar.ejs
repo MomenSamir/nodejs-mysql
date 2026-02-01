@@ -1,0 +1,87 @@
+<nav class="navbar">
+  <div class="nav-container">
+    <div class="nav-brand">
+      <a href="/tutorials">📚 Tutorial App</a>
+    </div>
+    <div class="nav-menu">
+      <% if (currentUser) { %>
+        <span class="nav-user">👤 <%= currentUser.username %></span>
+        <button class="nav-logout" onclick="handleLogout()">Logout</button>
+      <% } %>
+    </div>
+  </div>
+</nav>
+
+<style>
+  .navbar {
+    background: #667eea;
+    color: white;
+    padding: 15px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 0;
+  }
+  .nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .nav-brand a {
+    color: white;
+    text-decoration: none;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .nav-brand a:hover {
+    opacity: 0.9;
+  }
+  .nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .nav-user {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .nav-logout {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+  .nav-logout:hover {
+    background: rgba(255,255,255,0.3);
+  }
+</style>
+
+<script>
+  async function handleLogout() {
+    if (!confirm('Are you sure you want to logout?')) return;
+    
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.ok) {
+        window.location.href = '/login';
+      } else {
+        alert('Logout failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('An error occurred during logout.');
+    }
+  }
+</script>

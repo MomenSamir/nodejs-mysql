@@ -1,5 +1,9 @@
 const tutorials = require("../controllers/tutorial.controller.js");
+const { isAuthenticated } = require("../middleware/auth.middleware");
 const router = require("express").Router();
+
+// All routes require authentication
+router.use(isAuthenticated);
 
 // Create a new Tutorial
 router.post("/", tutorials.create);
