@@ -76,8 +76,28 @@
       border-radius: 5px;
       background: #fafafa;
       display: flex;
-      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .tutorial-image {
+      flex-shrink: 0;
+      width: 150px;
+      height: 100px;
+      border-radius: 5px;
+      overflow: hidden;
+      background: #e9ecef;
+      display: flex;
       align-items: center;
+      justify-content: center;
+    }
+    .tutorial-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .tutorial-image-placeholder {
+      color: #adb5bd;
+      font-size: 40px;
     }
     .tutorial-info {
       flex: 1;
@@ -111,6 +131,7 @@
     .tutorial-actions {
       display: flex;
       gap: 5px;
+      flex-shrink: 0;
     }
     .delete-form {
       display: inline;
@@ -144,6 +165,14 @@
       <ul class="tutorial-list">
         <% tutorials.forEach(t => { %>
           <li class="tutorial-item">
+            <div class="tutorial-image">
+              <% if (t.image) { %>
+                <img src="<%= t.image %>" alt="<%= t.title %>">
+              <% } else { %>
+                <div class="tutorial-image-placeholder">📄</div>
+              <% } %>
+            </div>
+            
             <div class="tutorial-info">
               <div class="tutorial-title"><%= t.title %></div>
               <div class="tutorial-description"><%= t.description || 'No description' %></div>
@@ -151,6 +180,7 @@
                 <%= t.published ? '✓ Published' : '○ Draft' %>
               </span>
             </div>
+            
             <div class="tutorial-actions">
               <a href="/tutorials/<%= t.id %>/edit" class="btn btn-edit">Edit</a>
               <form method="POST" action="/api/tutorials/<%= t.id %>" class="delete-form" onsubmit="return confirm('Delete this tutorial?');">

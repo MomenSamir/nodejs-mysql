@@ -24,6 +24,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors(corsOptions));
 
+// ---------- Static Files (Serve uploaded images) ----------
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
 // ---------- Session Middleware (Apply to ALL routes) ----------
 app.use(session({
   key: 'session_cookie_name',

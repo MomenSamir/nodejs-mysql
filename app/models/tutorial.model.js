@@ -1,10 +1,11 @@
-const sql = require("./db.js"); // promise-based pool
+const sql = require("./db.js");
 
 class Tutorial {
   constructor(tutorial) {
     this.title = tutorial.title;
     this.description = tutorial.description;
     this.published = tutorial.published || false;
+    this.image = tutorial.image || null;
   }
 
   // Create a new Tutorial
@@ -60,8 +61,8 @@ class Tutorial {
   static async updateById(id, tutorial) {
     try {
       const [res] = await sql.query(
-        "UPDATE tutorials SET title = ?, description = ?, published = ? WHERE id = ?",
-        [tutorial.title, tutorial.description, tutorial.published, id]
+        "UPDATE tutorials SET title = ?, description = ?, published = ?, image = ? WHERE id = ?",
+        [tutorial.title, tutorial.description, tutorial.published, tutorial.image, id]
       );
       if (res.affectedRows === 0) throw { kind: "not_found" };
       return { id, ...tutorial };
