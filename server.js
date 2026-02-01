@@ -19,7 +19,12 @@ const sessionStore = new MySQLStore({
   expiration: 86400000, // 1 day
 }, require("./app/models/db.js"));
 
-// ---------- Session Middleware ----------
+// ---------- Middleware (Apply to ALL routes) ----------
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors(corsOptions));
+
+// ---------- Session Middleware (Apply to ALL routes) ----------
 app.use(session({
   key: 'session_cookie_name',
   secret: 'your-secret-key-change-this-in-production', // Change this!
@@ -31,12 +36,7 @@ app.use(session({
   }
 }));
 
-// ---------- Middleware ----------
-app.use("/api", cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Attach user to all views
+// Attach user to all views (non-blocking)
 const { attachUser } = require("./app/middleware/auth.middleware");
 app.use(attachUser);
 
@@ -44,22 +44,26 @@ app.use(attachUser);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "app/views"));
 
-// ---------- Routes ----------
+// ---------- Routes (ORDER MATTERS!) ----------
+
+// 1. Root redirect
 app.get("/", (req, res) => {
   res.redirect("/tutorials");
 });
 
-// Auth routes (view)
-app.use("/", require("./app/routes/auth.view.routes"));
-
-// Tutorial routes (view)
-app.use("/", require("./app/routes/tutorial.view.routes"));
-
-// Auth routes (API)
+// 2. Auth routes FIRST (most specific)
+// Auth routes (API) - PUBLIC (register/login) and PROTECTED (logout/me)
 app.use("/api/auth", require("./app/routes/auth.routes"));
 
-// Tutorial routes (API)
+// Auth routes (view) - PUBLIC
+app.use("/", require("./app/routes/auth.view.routes"));
+
+// 3. Tutorial routes AFTER auth (less specific)
+// Tutorial routes (API) - PROTECTED (inside the route file)
 app.use("/api/tutorials", require("./app/routes/tutorial.routes"));
+
+// Tutorial routes (view) - PROTECTED (inside the route file)
+app.use("/", require("./app/routes/tutorial.view.routes"));
 
 // ---------- Start Server ----------
 app.listen(PORT, () => {

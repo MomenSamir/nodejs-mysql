@@ -38,13 +38,23 @@ exports.register = async (req, res) => {
     req.session.userId = data.id;
     req.session.username = data.username;
     
-    res.status(201).json({
-      message: "User registered successfully!",
-      user: {
-        id: data.id,
-        username: data.username,
-        email: data.email
+    // IMPORTANT: Save session before sending response
+    req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).json({
+          message: "Error saving session"
+        });
       }
+      
+      res.status(201).json({
+        message: "User registered successfully!",
+        user: {
+          id: data.id,
+          username: data.username,
+          email: data.email
+        }
+      });
     });
   } catch (err) {
     if (err.kind === "duplicate") {
@@ -90,13 +100,23 @@ exports.login = async (req, res) => {
     req.session.userId = user.id;
     req.session.username = user.username;
 
-    res.json({
-      message: "Login successful!",
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email
+    // IMPORTANT: Save session before sending response
+    req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).json({
+          message: "Error saving session"
+        });
       }
+      
+      res.json({
+        message: "Login successful!",
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email
+        }
+      });
     });
   } catch (err) {
     res.status(500).json({

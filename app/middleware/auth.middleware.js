@@ -7,7 +7,8 @@ const isAuthenticated = (req, res, next) => {
   
   // User is not logged in
   // If it's an API request, return JSON error
-  if (req.path.startsWith('/api')) {
+  // Check both req.originalUrl (full path) and req.baseUrl
+  if (req.originalUrl.startsWith('/api') || req.baseUrl.startsWith('/api')) {
     return res.status(401).json({ message: "Unauthorized. Please login." });
   }
   
