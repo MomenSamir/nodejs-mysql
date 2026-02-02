@@ -11,7 +11,13 @@ class Tutorial {
   // Create a new Tutorial
   static async create(newTutorial) {
     try {
-      const [res] = await sql.query("INSERT INTO tutorials SET ?", newTutorial);
+      // Convert published to boolean/integer
+      const tutorialData = {
+        ...newTutorial,
+        published: newTutorial.published === true || newTutorial.published === 'true' ? 1 : 0
+      };
+      
+      const [res] = await sql.query("INSERT INTO tutorials SET ?", tutorialData);
       return { id: res.insertId, ...newTutorial };
     } catch (err) {
       console.error("Error creating tutorial:", err);
@@ -60,13 +66,22 @@ class Tutorial {
   // Update by Id
   static async updateById(id, tutorial) {
     try {
+      // Convert published to integer (MySQL boolean)
+      const publishedValue = tutorial.published === true || tutorial.published === 'true' ? 1 : 0;
+      
+      console.log("Model updateById - Converting published:", tutorial.published, "->", publishedValue);
+      
       const [res] = await sql.query(
         "UPDATE tutorials SET title = ?, description = ?, published = ?, image = ? WHERE id = ?",
-        [tutorial.title, tutorial.description, tutorial.published, tutorial.image, id]
+        [tutorial.title, tutorial.description, publishedValue, tutorial.image, id]
       );
+      
+      console.log("Model updateById - affectedRows:", res.affectedRows);
+      
       if (res.affectedRows === 0) throw { kind: "not_found" };
-      return { id, ...tutorial };
+      return { id, ...tutorial, published: publishedValue };
     } catch (err) {
+      console.error("Model updateById - Error:", err);
       throw err;
     }
   }
