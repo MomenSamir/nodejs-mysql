@@ -37,18 +37,52 @@ class Tutorial {
     }
   }
 
-  // Get all
-  static async getAll(title) {
+  // Get all with search, filter, and pagination
+  static async getAll(options = {}) {
     try {
-      let query = "SELECT * FROM tutorials";
+      const { title, published, page = 1, limit = 10 } = options;
+      
+      let query = "SELECT * FROM tutorials WHERE 1=1";
       const params = [];
+
+      // Search by title
       if (title) {
-        query += " WHERE title LIKE ?";
+        query += " AND title LIKE ?";
         params.push(`%${title}%`);
       }
+
+      // Filter by published status
+      if (published !== undefined && published !== null && published !== '') {
+        query += " AND published = ?";
+        params.push(published === 'true' || published === true ? 1 : 0);
+      }
+
+      // Count total results (before pagination)
+      const countQuery = query.replace("SELECT *", "SELECT COUNT(*) as total");
+      const [countResult] = await sql.query(countQuery, params);
+      const total = countResult[0].total;
+
+      // Add sorting
+      query += " ORDER BY created_at DESC";
+
+      // Add pagination
+      const offset = (page - 1) * limit;
+      query += " LIMIT ? OFFSET ?";
+      params.push(parseInt(limit), parseInt(offset));
+
       const [rows] = await sql.query(query, params);
-      return rows;
+      
+      return {
+        tutorials: rows,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
     } catch (err) {
+      console.error("Error in getAll:", err);
       throw err;
     }
   }
@@ -56,7 +90,7 @@ class Tutorial {
   // Get all published
   static async getAllPublished() {
     try {
-      const [rows] = await sql.query("SELECT * FROM tutorials WHERE published = true");
+      const [rows] = await sql.query("SELECT * FROM tutorials WHERE published = 1 ORDER BY created_at DESC");
       return rows;
     } catch (err) {
       throw err;
@@ -69,14 +103,10 @@ class Tutorial {
       // Convert published to integer (MySQL boolean)
       const publishedValue = tutorial.published === true || tutorial.published === 'true' ? 1 : 0;
       
-      console.log("Model updateById - Converting published:", tutorial.published, "->", publishedValue);
-      
       const [res] = await sql.query(
         "UPDATE tutorials SET title = ?, description = ?, published = ?, image = ? WHERE id = ?",
         [tutorial.title, tutorial.description, publishedValue, tutorial.image, id]
       );
-      
-      console.log("Model updateById - affectedRows:", res.affectedRows);
       
       if (res.affectedRows === 0) throw { kind: "not_found" };
       return { id, ...tutorial, published: publishedValue };

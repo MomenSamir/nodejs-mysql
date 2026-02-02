@@ -34,6 +34,51 @@
       align-items: center;
       margin-bottom: 30px;
     }
+    .search-filter-bar {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .search-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .search-input {
+      flex: 1;
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+    .filter-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .filter-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+    }
+    .filter-select {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+    }
+    .results-info {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 15px;
+    }
     .btn {
       display: inline-block;
       padding: 10px 20px;
@@ -48,6 +93,12 @@
     }
     .btn:hover {
       background: #0056b3;
+    }
+    .btn-secondary {
+      background: #6c757d;
+    }
+    .btn-secondary:hover {
+      background: #5a6268;
     }
     .btn-danger {
       background: #dc3545;
@@ -145,6 +196,37 @@
       font-size: 18px;
       margin-bottom: 20px;
     }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+    .page-link {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background: white;
+      color: #007bff;
+      text-decoration: none;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .page-link:hover {
+      background: #007bff;
+      color: white;
+    }
+    .page-link.active {
+      background: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+    .page-link.disabled {
+      color: #6c757d;
+      pointer-events: none;
+      opacity: 0.5;
+    }
   </style>
 </head>
 <body>
@@ -156,10 +238,50 @@
       <a href="/tutorials/create" class="btn">+ Create New Tutorial</a>
     </div>
 
+    <!-- Search and Filter Bar -->
+    <div class="search-filter-bar">
+      <form method="GET" action="/tutorials">
+        <div class="search-row">
+          <input 
+            type="text" 
+            name="search" 
+            class="search-input" 
+            placeholder="Search tutorials by title..."
+            value="<%= filters.search %>"
+          >
+          <button type="submit" class="btn">🔍 Search</button>
+          <% if (filters.search || filters.status) { %>
+            <a href="/tutorials" class="btn btn-secondary">Clear</a>
+          <% } %>
+        </div>
+        <div class="filter-row">
+          <span class="filter-label">Status:</span>
+          <select name="status" class="filter-select" onchange="this.form.submit()">
+            <option value="">All Tutorials</option>
+            <option value="true" <%= filters.status === 'true' ? 'selected' : '' %>>Published</option>
+            <option value="false" <%= filters.status === 'false' ? 'selected' : '' %>>Draft</option>
+          </select>
+        </div>
+      </form>
+    </div>
+
+    <!-- Results Info -->
+    <% if (pagination.total > 0) { %>
+      <div class="results-info">
+        Showing <%= ((pagination.page - 1) * pagination.limit) + 1 %>-<%= Math.min(pagination.page * pagination.limit, pagination.total) %> of <%= pagination.total %> tutorials
+      </div>
+    <% } %>
+
+    <!-- Tutorial List -->
     <% if (tutorials.length === 0) { %>
       <div class="empty-state">
-        <p>No tutorials found</p>
-        <a href="/tutorials/create" class="btn">Create your first tutorial</a>
+        <% if (filters.search || filters.status) { %>
+          <p>No tutorials found matching your search</p>
+          <a href="/tutorials" class="btn">Clear filters</a>
+        <% } else { %>
+          <p>No tutorials found</p>
+          <a href="/tutorials/create" class="btn">Create your first tutorial</a>
+        <% } %>
       </div>
     <% } else { %>
       <ul class="tutorial-list">
@@ -191,6 +313,43 @@
           </li>
         <% }) %>
       </ul>
+
+      <!-- Pagination -->
+      <% if (pagination.totalPages > 1) { %>
+        <div class="pagination">
+          <% 
+            const currentPage = pagination.page;
+            const totalPages = pagination.totalPages;
+            const searchParam = filters.search ? `&search=${encodeURIComponent(filters.search)}` : '';
+            const statusParam = filters.status ? `&status=${filters.status}` : '';
+            const queryParams = searchParam + statusParam;
+          %>
+          
+          <!-- Previous -->
+          <a href="/tutorials?page=<%= currentPage - 1 %><%= queryParams %>" 
+             class="page-link <%= currentPage === 1 ? 'disabled' : '' %>">
+            ‹ Previous
+          </a>
+
+          <!-- Page numbers -->
+          <% for (let i = 1; i <= totalPages; i++) { %>
+            <% if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) { %>
+              <a href="/tutorials?page=<%= i %><%= queryParams %>" 
+                 class="page-link <%= i === currentPage ? 'active' : '' %>">
+                <%= i %>
+              </a>
+            <% } else if (i === currentPage - 3 || i === currentPage + 3) { %>
+              <span class="page-link disabled">...</span>
+            <% } %>
+          <% } %>
+
+          <!-- Next -->
+          <a href="/tutorials?page=<%= currentPage + 1 %><%= queryParams %>" 
+             class="page-link <%= currentPage === totalPages ? 'disabled' : '' %>">
+            Next ›
+          </a>
+        </div>
+      <% } %>
     <% } %>
   </div>
 </body>
