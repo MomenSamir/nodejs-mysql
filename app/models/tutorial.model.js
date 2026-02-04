@@ -1,4 +1,5 @@
 const sql = require("./db.js");
+const Tag = require("./tag.model.js");
 
 class Tutorial {
   constructor(tutorial) {
@@ -6,6 +7,7 @@ class Tutorial {
     this.description = tutorial.description;
     this.published = tutorial.published || false;
     this.image = tutorial.image || null;
+    this.category_id = tutorial.category_id || null;
   }
 
   // Create a new Tutorial
@@ -25,13 +27,30 @@ class Tutorial {
     }
   }
 
-  // Find by Id
+  // Find by Id with category and tags
   static async findById(id) {
     try {
+      // Get tutorial
       const [rows] = await sql.query("SELECT * FROM tutorials WHERE id = ?", [id]);
-      if (rows.length) return rows[0];
-      const error = { kind: "not_found" };
-      throw error;
+      if (!rows.length) throw { kind: "not_found" };
+      
+      const tutorial = rows[0];
+      
+      // Get category
+      if (tutorial.category_id) {
+        const [category] = await sql.query(
+          "SELECT * FROM categories WHERE id = ?",
+          [tutorial.category_id]
+        );
+        tutorial.category = category[0] || null;
+      } else {
+        tutorial.category = null;
+      }
+      
+      // Get tags
+      tutorial.tags = await Tag.getByTutorialId(id);
+      
+      return tutorial;
     } catch (err) {
       throw err;
     }
@@ -40,30 +59,57 @@ class Tutorial {
   // Get all with search, filter, and pagination
   static async getAll(options = {}) {
     try {
-      const { title, published, page = 1, limit = 10 } = options;
+      const { title, published, category, tag, page = 1, limit = 10 } = options;
       
-      let query = "SELECT * FROM tutorials WHERE 1=1";
+      let query = `
+        SELECT DISTINCT t.*, c.name as category_name
+        FROM tutorials t
+        LEFT JOIN categories c ON t.category_id = c.id
+      `;
+      
       const params = [];
+      const conditions = [];
 
       // Search by title
       if (title) {
-        query += " AND title LIKE ?";
+        conditions.push("t.title LIKE ?");
         params.push(`%${title}%`);
       }
 
       // Filter by published status
       if (published !== undefined && published !== null && published !== '') {
-        query += " AND published = ?";
+        conditions.push("t.published = ?");
         params.push(published === 'true' || published === true ? 1 : 0);
       }
 
+      // Filter by category
+      if (category) {
+        conditions.push("t.category_id = ?");
+        params.push(category);
+      }
+
+      // Filter by tag (requires join)
+      if (tag) {
+        query += " INNER JOIN tutorial_tags tt ON t.id = tt.tutorial_id";
+        conditions.push("tt.tag_id = ?");
+        params.push(tag);
+      }
+
+      // Add WHERE conditions
+      if (conditions.length > 0) {
+        query += " WHERE " + conditions.join(" AND ");
+      }
+
       // Count total results (before pagination)
-      const countQuery = query.replace("SELECT *", "SELECT COUNT(*) as total");
+      const countQuery = query.replace(
+        "SELECT DISTINCT t.*, c.name as category_name",
+        "SELECT COUNT(DISTINCT t.id) as total"
+      );
       const [countResult] = await sql.query(countQuery, params);
       const total = countResult[0].total;
 
       // Add sorting
-      query += " ORDER BY created_at DESC";
+      query += " ORDER BY t.created_at DESC";
 
       // Add pagination
       const offset = (page - 1) * limit;
@@ -71,6 +117,11 @@ class Tutorial {
       params.push(parseInt(limit), parseInt(offset));
 
       const [rows] = await sql.query(query, params);
+      
+      // Get tags for each tutorial
+      for (const tutorial of rows) {
+        tutorial.tags = await Tag.getByTutorialId(tutorial.id);
+      }
       
       return {
         tutorials: rows,
@@ -90,7 +141,19 @@ class Tutorial {
   // Get all published
   static async getAllPublished() {
     try {
-      const [rows] = await sql.query("SELECT * FROM tutorials WHERE published = 1 ORDER BY created_at DESC");
+      const [rows] = await sql.query(`
+        SELECT t.*, c.name as category_name
+        FROM tutorials t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.published = 1
+        ORDER BY t.created_at DESC
+      `);
+      
+      // Get tags for each tutorial
+      for (const tutorial of rows) {
+        tutorial.tags = await Tag.getByTutorialId(tutorial.id);
+      }
+      
       return rows;
     } catch (err) {
       throw err;
@@ -104,8 +167,8 @@ class Tutorial {
       const publishedValue = tutorial.published === true || tutorial.published === 'true' ? 1 : 0;
       
       const [res] = await sql.query(
-        "UPDATE tutorials SET title = ?, description = ?, published = ?, image = ? WHERE id = ?",
-        [tutorial.title, tutorial.description, publishedValue, tutorial.image, id]
+        "UPDATE tutorials SET title = ?, description = ?, published = ?, image = ?, category_id = ? WHERE id = ?",
+        [tutorial.title, tutorial.description, publishedValue, tutorial.image, tutorial.category_id, id]
       );
       
       if (res.affectedRows === 0) throw { kind: "not_found" };
@@ -119,6 +182,7 @@ class Tutorial {
   // Delete by Id
   static async remove(id) {
     try {
+      // Tutorial_tags will be automatically deleted due to ON DELETE CASCADE
       const [res] = await sql.query("DELETE FROM tutorials WHERE id = ?", [id]);
       if (res.affectedRows === 0) throw { kind: "not_found" };
       return res;
