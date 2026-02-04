@@ -61,6 +61,7 @@ app.use("/api/auth", require("./app/routes/auth.routes"));
 // Auth routes (view) - PUBLIC
 app.use("/", require("./app/routes/auth.view.routes"));
 
+
 // 3. Category & Tag routes (API) - PROTECTED
 app.use("/api/categories", require("./app/routes/category.routes"));
 app.use("/api/tags", require("./app/routes/tag.routes"));

@@ -1,5 +1,6 @@
 const express = require("express");
 const Tutorial = require("../models/tutorial.model.js");
+const Category = require("../models/category.model.js");
 const { isAuthenticated } = require("../middleware/auth.middleware");
 
 const router = express.Router();
@@ -13,18 +14,22 @@ router.get("/tutorials", async (req, res) => {
     const options = {
       title: req.query.search,
       published: req.query.status,
+      category: req.query.category,
       page: req.query.page || 1,
       limit: 10
     };
 
     const result = await Tutorial.getAll(options);
+    const categories = await Category.getAll();
     
     res.render("tutorials/index", {
       tutorials: result.tutorials,
       pagination: result.pagination,
+      categories: categories,
       filters: {
         search: req.query.search || '',
-        status: req.query.status || ''
+        status: req.query.status || '',
+        category: req.query.category || ''
       }
     });
   } catch (err) {

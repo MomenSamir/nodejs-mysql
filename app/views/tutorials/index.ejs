@@ -58,8 +58,14 @@
     }
     .filter-row {
       display: flex;
-      gap: 10px;
+      gap: 15px;
       align-items: center;
+      flex-wrap: wrap;
+    }
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .filter-label {
       font-size: 14px;
@@ -73,6 +79,7 @@
       font-size: 14px;
       background: white;
       cursor: pointer;
+      min-width: 150px;
     }
     .results-info {
       font-size: 14px;
@@ -162,7 +169,23 @@
     .tutorial-description {
       color: #666;
       font-size: 14px;
-      margin-bottom: 5px;
+      margin-bottom: 8px;
+    }
+    .tutorial-meta {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .tutorial-category {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #e3f2fd;
+      color: #1976d2;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
     }
     .tutorial-status {
       display: inline-block;
@@ -178,6 +201,19 @@
     .status-draft {
       background: #fff3cd;
       color: #856404;
+    }
+    .tutorial-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .tag-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      background: #f0f0f0;
+      color: #666;
+      border-radius: 12px;
+      font-size: 11px;
     }
     .tutorial-actions {
       display: flex;
@@ -250,17 +286,33 @@
             value="<%= filters.search %>"
           >
           <button type="submit" class="btn">🔍 Search</button>
-          <% if (filters.search || filters.status) { %>
+          <% if (filters.search || filters.status || filters.category) { %>
             <a href="/tutorials" class="btn btn-secondary">Clear</a>
           <% } %>
         </div>
         <div class="filter-row">
-          <span class="filter-label">Status:</span>
-          <select name="status" class="filter-select" onchange="this.form.submit()">
-            <option value="">All Tutorials</option>
-            <option value="true" <%= filters.status === 'true' ? 'selected' : '' %>>Published</option>
-            <option value="false" <%= filters.status === 'false' ? 'selected' : '' %>>Draft</option>
-          </select>
+          <div class="filter-group">
+            <span class="filter-label">Category:</span>
+            <select name="category" class="filter-select" onchange="this.form.submit()">
+              <option value="">All Categories</option>
+              <% if (typeof categories !== 'undefined') { %>
+                <% categories.forEach(cat => { %>
+                  <option value="<%= cat.id %>" <%= filters.category == cat.id ? 'selected' : '' %>>
+                    <%= cat.name %>
+                  </option>
+                <% }) %>
+              <% } %>
+            </select>
+          </div>
+          
+          <div class="filter-group">
+            <span class="filter-label">Status:</span>
+            <select name="status" class="filter-select" onchange="this.form.submit()">
+              <option value="">All Tutorials</option>
+              <option value="true" <%= filters.status === 'true' ? 'selected' : '' %>>Published</option>
+              <option value="false" <%= filters.status === 'false' ? 'selected' : '' %>>Draft</option>
+            </select>
+          </div>
         </div>
       </form>
     </div>
@@ -275,8 +327,8 @@
     <!-- Tutorial List -->
     <% if (tutorials.length === 0) { %>
       <div class="empty-state">
-        <% if (filters.search || filters.status) { %>
-          <p>No tutorials found matching your search</p>
+        <% if (filters.search || filters.status || filters.category) { %>
+          <p>No tutorials found matching your filters</p>
           <a href="/tutorials" class="btn">Clear filters</a>
         <% } else { %>
           <p>No tutorials found</p>
@@ -298,9 +350,23 @@
             <div class="tutorial-info">
               <div class="tutorial-title"><%= t.title %></div>
               <div class="tutorial-description"><%= t.description || 'No description' %></div>
-              <span class="tutorial-status <%= t.published ? 'status-published' : 'status-draft' %>">
-                <%= t.published ? '✓ Published' : '○ Draft' %>
-              </span>
+              
+              <div class="tutorial-meta">
+                <% if (t.category_name) { %>
+                  <span class="tutorial-category">📁 <%= t.category_name %></span>
+                <% } %>
+                <span class="tutorial-status <%= t.published ? 'status-published' : 'status-draft' %>">
+                  <%= t.published ? '✓ Published' : '○ Draft' %>
+                </span>
+              </div>
+              
+              <% if (t.tags && t.tags.length > 0) { %>
+                <div class="tutorial-tags">
+                  <% t.tags.forEach(tag => { %>
+                    <span class="tag-badge">#<%= tag.name %></span>
+                  <% }) %>
+                </div>
+              <% } %>
             </div>
             
             <div class="tutorial-actions">
@@ -322,7 +388,8 @@
             const totalPages = pagination.totalPages;
             const searchParam = filters.search ? `&search=${encodeURIComponent(filters.search)}` : '';
             const statusParam = filters.status ? `&status=${filters.status}` : '';
-            const queryParams = searchParam + statusParam;
+            const categoryParam = filters.category ? `&category=${filters.category}` : '';
+            const queryParams = searchParam + statusParam + categoryParam;
           %>
           
           <!-- Previous -->

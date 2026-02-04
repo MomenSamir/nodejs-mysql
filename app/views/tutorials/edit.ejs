@@ -50,7 +50,8 @@
     }
     input[type="text"],
     textarea,
-    input[type="file"] {
+    input[type="file"],
+    select {
       width: 100%;
       padding: 12px;
       border: 1px solid #ddd;
@@ -61,9 +62,14 @@
     }
     input[type="text"]:focus,
     textarea:focus,
-    input[type="file"]:focus {
+    input[type="file"]:focus,
+    select:focus {
       outline: none;
       border-color: #007bff;
+    }
+    select {
+      cursor: pointer;
+      background: white;
     }
     textarea {
       resize: vertical;
@@ -101,6 +107,43 @@
       width: 100%;
       border-radius: 5px;
       border: 2px solid #28a745;
+    }
+    .tag-input-container {
+      position: relative;
+    }
+    .tag-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+      min-height: 40px;
+      padding: 8px;
+      border: 1px solid #e0e0e0;
+      border-radius: 5px;
+      background: #fafafa;
+    }
+    .tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: #007bff;
+      color: white;
+      border-radius: 20px;
+      font-size: 13px;
+    }
+    .tag-chip button {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0;
+      margin: 0;
+      line-height: 1;
+    }
+    .tag-chip button:hover {
+      opacity: 0.8;
     }
     .checkbox-group {
       display: flex;
@@ -184,6 +227,26 @@
       </div>
 
       <div class="form-group">
+        <label for="category_id">Category</label>
+        <select id="category_id" name="category_id">
+          <option value="">Loading categories...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="tagInput">Tags</label>
+        <div class="tag-input-container">
+          <input 
+            type="text" 
+            id="tagInput" 
+            placeholder="Type a tag and press Enter"
+          >
+          <div class="file-hint">Press Enter or comma to add tags</div>
+          <div class="tag-chips" id="tagChips"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
         <label for="image">Tutorial Image</label>
         
         <% if (tutorial.image) { %>
@@ -230,6 +293,82 @@
   </div>
 
   <script>
+    const tutorialData = <%- JSON.stringify(tutorial) %>;
+    let tags = tutorialData.tags ? tutorialData.tags.map(t => t.name) : [];
+
+    // Load categories
+    async function loadCategories() {
+      try {
+        const response = await fetch('/api/categories', {
+          credentials: 'same-origin'  // Include cookies for authentication
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to load categories');
+        }
+        
+        const categories = await response.json();
+        const select = document.getElementById('category_id');
+        
+        // Clear loading option
+        select.innerHTML = '<option value="">-- Select Category --</option>';
+        
+        categories.forEach(cat => {
+          const option = document.createElement('option');
+          option.value = cat.id;
+          option.textContent = cat.name;
+          if (tutorialData.category_id == cat.id) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error loading categories:', error);
+        const select = document.getElementById('category_id');
+        select.innerHTML = '<option value="">Error loading categories</option>';
+      }
+    }
+
+    // Tag input handling
+    const tagInput = document.getElementById('tagInput');
+    const tagChips = document.getElementById('tagChips');
+
+    function addTag(tagName) {
+      tagName = tagName.trim();
+      if (tagName && !tags.includes(tagName)) {
+        tags.push(tagName);
+        renderTags();
+      }
+      tagInput.value = '';
+    }
+
+    function removeTag(tagName) {
+      tags = tags.filter(t => t !== tagName);
+      renderTags();
+    }
+
+    function renderTags() {
+      tagChips.innerHTML = tags.map(tag => `
+        <div class="tag-chip">
+          <span>${tag}</span>
+          <button type="button" onclick="removeTag('${tag}')">×</button>
+        </div>
+      `).join('');
+    }
+
+    tagInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        addTag(tagInput.value);
+      }
+    });
+
+    tagInput.addEventListener('blur', () => {
+      if (tagInput.value.trim()) {
+        addTag(tagInput.value);
+      }
+    });
+
     // Image preview
     document.getElementById('image').addEventListener('change', function(e) {
       const file = e.target.files[0];
@@ -251,6 +390,9 @@
       
       const formData = new FormData(e.target);
       
+      // Add tags as comma-separated string
+      formData.set('tags', tags.join(','));
+      
       // Handle checkbox
       if (!formData.get('published')) {
         formData.set('published', 'false');
@@ -259,7 +401,8 @@
       try {
         const response = await fetch('/api/tutorials/<%= tutorial.id %>', {
           method: 'PUT',
-          body: formData  // Don't set Content-Type, browser will set it with boundary
+          credentials: 'same-origin',  // Include cookies
+          body: formData
         });
 
         if (response.ok) {
@@ -273,6 +416,10 @@
         alert('Error updating tutorial');
       }
     });
+
+    // Initialize
+    loadCategories();
+    renderTags();
   </script>
 </body>
 </html>

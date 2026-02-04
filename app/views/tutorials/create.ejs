@@ -50,7 +50,8 @@
     }
     input[type="text"],
     textarea,
-    input[type="file"] {
+    input[type="file"],
+    select {
       width: 100%;
       padding: 12px;
       border: 1px solid #ddd;
@@ -61,9 +62,14 @@
     }
     input[type="text"]:focus,
     textarea:focus,
-    input[type="file"]:focus {
+    input[type="file"]:focus,
+    select:focus {
       outline: none;
       border-color: #007bff;
+    }
+    select {
+      cursor: pointer;
+      background: white;
     }
     textarea {
       resize: vertical;
@@ -87,6 +93,43 @@
       width: 100%;
       border-radius: 5px;
       border: 2px solid #ddd;
+    }
+    .tag-input-container {
+      position: relative;
+    }
+    .tag-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+      min-height: 40px;
+      padding: 8px;
+      border: 1px solid #e0e0e0;
+      border-radius: 5px;
+      background: #fafafa;
+    }
+    .tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: #007bff;
+      color: white;
+      border-radius: 20px;
+      font-size: 13px;
+    }
+    .tag-chip button {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0;
+      margin: 0;
+      line-height: 1;
+    }
+    .tag-chip button:hover {
+      opacity: 0.8;
     }
     .checkbox-group {
       display: flex;
@@ -131,6 +174,10 @@
     .btn-secondary:hover {
       background: #5a6268;
     }
+    .loading {
+      color: #999;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -160,6 +207,26 @@
           name="description" 
           placeholder="Enter tutorial description"
         ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="category_id">Category</label>
+        <select id="category_id" name="category_id">
+          <option value="">Loading categories...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="tagInput">Tags</label>
+        <div class="tag-input-container">
+          <input 
+            type="text" 
+            id="tagInput" 
+            placeholder="Type a tag and press Enter"
+          >
+          <div class="file-hint">Press Enter or comma to add tags</div>
+          <div class="tag-chips" id="tagChips"></div>
+        </div>
       </div>
 
       <div class="form-group">
@@ -196,6 +263,90 @@
   </div>
 
   <script>
+    let tags = [];
+
+    // Load categories
+    async function loadCategories() {
+      console.log('Starting to load categories...');
+      try {
+        const response = await fetch('/api/categories', {
+          credentials: 'same-origin'  // Include cookies for authentication
+        });
+        
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+          throw new Error('Failed to load categories');
+        }
+        
+        const categories = await response.json();
+        console.log('Categories loaded:', categories);
+        
+        const select = document.getElementById('category_id');
+        
+        // Clear loading option
+        select.innerHTML = '<option value="">-- Select Category --</option>';
+        
+        if (!Array.isArray(categories)) {
+          console.error('Categories is not an array:', categories);
+          throw new Error('Invalid categories data');
+        }
+        
+        categories.forEach(cat => {
+          const option = document.createElement('option');
+          option.value = cat.id;
+          option.textContent = cat.name;
+          select.appendChild(option);
+        });
+        
+        console.log('Categories dropdown populated successfully');
+      } catch (error) {
+        console.error('Error loading categories:', error);
+        const select = document.getElementById('category_id');
+        select.innerHTML = '<option value="">Error loading categories</option>';
+      }
+    }
+
+    // Tag input handling
+    const tagInput = document.getElementById('tagInput');
+    const tagChips = document.getElementById('tagChips');
+
+    function addTag(tagName) {
+      tagName = tagName.trim();
+      if (tagName && !tags.includes(tagName)) {
+        tags.push(tagName);
+        renderTags();
+      }
+      tagInput.value = '';
+    }
+
+    function removeTag(tagName) {
+      tags = tags.filter(t => t !== tagName);
+      renderTags();
+    }
+
+    function renderTags() {
+      tagChips.innerHTML = tags.map(tag => `
+        <div class="tag-chip">
+          <span>${tag}</span>
+          <button type="button" onclick="removeTag('${tag.replace(/'/g, "\\'")}')">×</button>
+        </div>
+      `).join('');
+    }
+
+    tagInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        addTag(tagInput.value);
+      }
+    });
+
+    tagInput.addEventListener('blur', () => {
+      if (tagInput.value.trim()) {
+        addTag(tagInput.value);
+      }
+    });
+
     // Image preview
     document.getElementById('image').addEventListener('change', function(e) {
       const file = e.target.files[0];
@@ -217,6 +368,11 @@
       
       const formData = new FormData(e.target);
       
+      // Add tags as comma-separated string
+      if (tags.length > 0) {
+        formData.set('tags', tags.join(','));
+      }
+      
       // Handle checkbox
       if (!formData.get('published')) {
         formData.set('published', 'false');
@@ -225,7 +381,8 @@
       try {
         const response = await fetch('/api/tutorials', {
           method: 'POST',
-          body: formData  // Don't set Content-Type, browser will set it with boundary
+          credentials: 'same-origin',  // Include cookies
+          body: formData
         });
 
         if (response.ok) {
@@ -239,6 +396,9 @@
         alert('Error creating tutorial');
       }
     });
+
+    // Load categories on page load
+    loadCategories();
   </script>
 </body>
 </html>
